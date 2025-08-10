@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Image, Upload, Trash2, Edit, Eye, Download, Search, Filter, Grid, List, Plus, X, Wrench, AlertTriangle, Settings } from 'lucide-react'
-import { fileToBase64, generateUniqueFileName } from '../utils/fileUtils'
+import { fileToBase64, generateUniqueFileName } from '../../utils/fileUtils'
 
 const ImageGallery = () => {
   const [images, setImages] = useState([])
