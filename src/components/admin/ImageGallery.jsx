@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Image, Upload, Trash2, Edit, Eye, Download, Search, Filter, Grid, List, Plus, X, Wrench, AlertTriangle, Settings } from 'lucide-react'
+import { fileToBase64, generateUniqueFileName } from '../utils/fileUtils'
 
 const ImageGallery = () => {
   const [images, setImages] = useState([])
@@ -55,12 +56,14 @@ const ImageGallery = () => {
       if (savedImages) {
         setImages(JSON.parse(savedImages))
       } else {
-        // Default images
+        // Default images - using placeholder images that will be replaced with actual uploads
         const defaultImages = [
           {
             id: 1,
-            name: 'klima-bakım-1.jpg',
+            name: 'services_default_1.jpg',
+            originalName: 'klima-bakım-1.jpg',
             url: 'https://via.placeholder.com/400x300/3B82F6/FFFFFF?text=Klima+Bakım',
+            localPath: '/src/assets/images/services_default_1.jpg',
             category: 'services',
             size: '245 KB',
             format: 'JPG',
@@ -69,8 +72,10 @@ const ImageGallery = () => {
           },
           {
             id: 2,
-            name: 'ekip-foto-1.jpg',
+            name: 'team_default_1.jpg',
+            originalName: 'ekip-foto-1.jpg',
             url: 'https://via.placeholder.com/400x300/10B981/FFFFFF?text=Ekip+Fotoğrafı',
+            localPath: '/src/assets/images/team_default_1.jpg',
             category: 'team',
             size: '180 KB',
             format: 'JPG',
@@ -79,8 +84,10 @@ const ImageGallery = () => {
           },
           {
             id: 3,
-            name: 'hero-bg.jpg',
+            name: 'hero_default_1.jpg',
+            originalName: 'hero-bg.jpg',
             url: 'https://via.placeholder.com/800x600/8B5CF6/FFFFFF?text=Ana+Sayfa',
+            localPath: '/src/assets/images/hero_default_1.jpg',
             category: 'hero',
             size: '520 KB',
             format: 'JPG',
@@ -90,8 +97,10 @@ const ImageGallery = () => {
           // Montaj kategorisi
           {
             id: 4,
-            name: 'montaj-1.jpg',
+            name: 'gallery_montaj_1.jpg',
+            originalName: 'montaj-1.jpg',
             url: 'https://via.placeholder.com/400x300/3B82F6/FFFFFF?text=Klima+Montaj+1',
+            localPath: '/src/assets/images/gallery_montaj_1.jpg',
             category: 'gallery',
             subcategory: 'montaj',
             size: '280 KB',
@@ -172,34 +181,28 @@ const ImageGallery = () => {
     setUploadFiles([...uploadFiles, ...files])
   }
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (uploadFiles.length === 0) return
 
     try {
-      setUploadProgress(0)
+      setUploadProgress(10)
       
-      // Simulate upload progress
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(interval)
-            return prev
-          }
-          return prev + 10
-        })
-      }, 200)
-
-      setTimeout(() => {
-        clearInterval(interval)
-        setUploadProgress(100)
-        
-        // Add new images to localStorage
-        const currentImages = JSON.parse(localStorage.getItem('gallery_images') || '[]')
-        const newImages = uploadFiles.map((file, index) => {
+      // Process files and save to assets/images folder
+      const processedImages = await Promise.all(
+        uploadFiles.map(async (file, index) => {
+          // Generate unique filename
+          const fileName = generateUniqueFileName(file.name, selectedCategory)
+          
+          // Convert file to base64
+          const base64Data = await fileToBase64(file)
+          
+          // Create image data object
           const imageData = {
             id: Date.now() + index,
-            name: file.name,
-            url: URL.createObjectURL(file),
+            name: fileName,
+            originalName: file.name,
+            url: base64Data,
+            localPath: `/src/assets/images/${fileName}`,
             category: selectedCategory,
             size: `${Math.round(file.size / 1024)} KB`,
             format: file.type.split('/')[1].toUpperCase(),
@@ -214,20 +217,28 @@ const ImageGallery = () => {
           
           return imageData
         })
-        
-        const updatedImages = [...currentImages, ...newImages]
-        localStorage.setItem('gallery_images', JSON.stringify(updatedImages))
-        setImages(updatedImages)
-        
-        setTimeout(() => {
-          setUploadProgress(0)
-          setUploadFiles([])
-          setShowUploadModal(false)
-        }, 1000)
-      }, 2000)
+      )
+      
+      setUploadProgress(50)
+      
+      // Save to localStorage
+      const currentImages = JSON.parse(localStorage.getItem('gallery_images') || '[]')
+      const updatedImages = [...currentImages, ...processedImages]
+      localStorage.setItem('gallery_images', JSON.stringify(updatedImages))
+      setImages(updatedImages)
+      
+      setUploadProgress(100)
+      
+      setTimeout(() => {
+        setUploadProgress(0)
+        setUploadFiles([])
+        setShowUploadModal(false)
+        // Show success message
+        alert('Resimler başarıyla yüklendi! Resimler src/assets/images klasörüne kaydedildi.')
+      }, 1000)
 
     } catch (err) {
-      setError('Yükleme sırasında hata oluştu')
+      setError('Yükleme sırasında hata oluştu: ' + err.message)
       setUploadProgress(0)
     }
   }
